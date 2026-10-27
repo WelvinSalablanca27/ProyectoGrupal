@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Inicio from './src/screens/Inicio';
 import CatalogoHabitacion from './src/screens/CatalogoHabitacion';
+import Huespedes from './src/components/Huespedes';
 import Reservas from './src/components/Reservas';
 
 const initialRooms = [
@@ -37,6 +38,15 @@ function TabIcon({ type, selected }) {
     );
   }
 
+  if (type === 'guests') {
+    return (
+      <View style={styles.guestIcon}>
+        <View style={[styles.guestHead, { borderColor: color }]} />
+        <View style={[styles.guestBody, { borderColor: color }]} />
+      </View>
+    );
+  }
+
   if (type === 'catalog') {
     return (
       <View style={[styles.bedIcon, { borderColor: color }]}>
@@ -64,9 +74,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('inicio');
   const [rooms, setRooms] = useState(initialRooms);
   const [reservations, setReservations] = useState([]);
+  const [guests, setGuests] = useState([]);
   const [checkInDate, setCheckInDate] = useState(() => new Date());
 
-  function reserveRoom(roomId, date, guest) {
+  function registerGuest(guest) {
+    setGuests((currentGuests) => [
+      { ...guest, id: `${Date.now()}` },
+      ...currentGuests,
+    ]);
+  }
+
+  function reserveRoom(roomId, checkInDate, checkOutDate, guest) {
     const roomIsAvailable = rooms.some(
       (room) => room.id === roomId && room.status === 'available',
     );
@@ -82,7 +100,8 @@ export default function App() {
         id: `${roomId}-${Date.now()}`,
         roomId,
         createdAt: new Date(),
-        checkInDate: date,
+        checkInDate,
+        checkOutDate,
         guest,
       },
       ...currentReservations,
@@ -119,7 +138,9 @@ export default function App() {
             onOpenEnUso={() => setActiveTab('enUso')}
           />
         ) : activeTab === 'catalogo' ? (
-          <CatalogoHabitacion />
+          <CatalogoHabitacion onOpenReservation={() => setActiveTab('reservas')} />
+        ) : activeTab === 'huespedes' ? (
+          <Huespedes guests={guests} onRegisterGuest={registerGuest} />
         ) : (
           <Reservas
             rooms={rooms}
@@ -168,36 +189,42 @@ export default function App() {
         </Pressable>
         <Pressable
           accessibilityRole="tab"
-          accessibilityLabel="Habitaciones disponibles"
-          accessibilityState={{ selected: activeTab === 'disponibles' }}
-          onPress={() => setActiveTab('disponibles')}
+          accessibilityLabel="Huéspedes"
+          accessibilityState={{ selected: activeTab === 'huespedes' }}
+          onPress={() => setActiveTab('huespedes')}
           style={styles.tab}
         >
-          <TabIcon type="calendar" selected={activeTab === 'disponibles'} />
+          <TabIcon type="guests" selected={activeTab === 'huespedes'} />
           <Text
             style={[
               styles.tabLabel,
-              activeTab === 'disponibles' && styles.selectedTabLabel,
+              activeTab === 'huespedes' && styles.selectedTabLabel,
             ]}
           >
-            Reservas
+            Huéspedes
           </Text>
         </Pressable>
         <Pressable
           accessibilityRole="tab"
-          accessibilityLabel="Habitaciones en uso"
-          accessibilityState={{ selected: activeTab === 'enUso' }}
+          accessibilityLabel={activeTab === 'reservas' ? 'Reservas' : 'Habitaciones en uso'}
+          accessibilityState={{
+            selected: activeTab === 'enUso' || activeTab === 'reservas',
+          }}
           onPress={() => setActiveTab('enUso')}
           style={styles.tab}
         >
-          <TabIcon type="calendar" selected={activeTab === 'enUso'} />
+          <TabIcon
+            type="calendar"
+            selected={activeTab === 'enUso' || activeTab === 'reservas'}
+          />
           <Text
             style={[
               styles.tabLabel,
-              activeTab === 'enUso' && styles.selectedTabLabel,
+              (activeTab === 'enUso' || activeTab === 'reservas') &&
+                styles.selectedTabLabel,
             ]}
           >
-            En uso
+            {activeTab === 'reservas' ? 'Reservas' : 'En uso'}
           </Text>
         </Pressable>
       </View>
@@ -271,6 +298,27 @@ const styles = StyleSheet.create({
     height: 7,
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
+  },
+  guestIcon: {
+    width: 23,
+    height: 23,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  guestHead: {
+    width: 8,
+    height: 8,
+    borderWidth: 2,
+    borderRadius: 4,
+    marginBottom: 2,
+  },
+  guestBody: {
+    width: 16,
+    height: 9,
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   calendarIcon: {
     width: 21,

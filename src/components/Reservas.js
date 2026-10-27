@@ -29,9 +29,34 @@ const guestFields = [
   { name: 'lugar_origen', label: 'Lugar de origen', required: true },
 ];
 
+function formatDateInput(date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInput(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
+
 function RoomRow({ room, reservation, onPress }) {
   const statusLabel = reservation
-    ? `Reserva · llegada ${reservation.checkInDate.toLocaleDateString('es')}`
+    ? `Reserva · ${reservation.checkInDate.toLocaleDateString('es')} – ${reservation.checkOutDate.toLocaleDateString('es')}`
     : room.status === 'occupied'
       ? 'En uso'
       : room.status === 'maintenance'
@@ -103,6 +128,12 @@ export default function Reservas({
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [guest, setGuest] = useState(emptyGuest);
   const [formError, setFormError] = useState('');
+  const [checkIn, setCheckIn] = useState(formatDateInput(checkInDate));
+  const [checkOut, setCheckOut] = useState(() => {
+    const nextDay = new Date(checkInDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    return formatDateInput(nextDay);
+  });
   const availableRooms = rooms.filter((room) => room.status === 'available');
   const occupiedRooms = rooms.filter((room) => room.status === 'occupied');
   const showingBooking = roomFilter === 'reservas';
@@ -117,6 +148,10 @@ export default function Reservas({
     setSelectedRoomId(roomId);
     setGuest(emptyGuest);
     setFormError('');
+    setCheckIn(formatDateInput(checkInDate));
+    const nextDay = new Date(checkInDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    setCheckOut(formatDateInput(nextDay));
   }
 
   function closeReservationForm() {
@@ -126,6 +161,17 @@ export default function Reservas({
   }
 
   function submitReservation() {
+    const checkInDateValue = parseDateInput(checkIn.trim());
+    const checkOutDateValue = parseDateInput(checkOut.trim());
+    if (!checkInDateValue || !checkOutDateValue) {
+      setFormError('Ingresa las fechas en formato AAAA-MM-DD.');
+      return;
+    }
+    if (checkOutDateValue <= checkInDateValue) {
+      setFormError('La fecha de salida debe ser posterior a la fecha de entrada.');
+      return;
+    }
+
     const missingField = guestFields.find(
       (field) => field.required && !guest[field.name].trim(),
     );
@@ -134,7 +180,7 @@ export default function Reservas({
       return;
     }
 
-    const saved = onReserveRoom(selectedRoomId, checkInDate, {
+    const saved = onReserveRoom(selectedRoomId, checkInDateValue, checkOutDateValue, {
       primer_nombre: guest.primer_nombre.trim(),
       segundo_nombre: guest.segundo_nombre.trim(),
       primer_apellido: guest.primer_apellido.trim(),
@@ -304,10 +350,32 @@ export default function Reservas({
           >
             <Text style={styles.eyebrow}>SOLICITUD DE RESERVA</Text>
             <Text style={styles.modalTitle}>Habitación {selectedRoomId}</Text>
-            <Text style={styles.subtitle}>Llegada: {checkInDate.toLocaleDateString('es')}</Text>
             <Text style={styles.formIntro}>
               Completa tus datos para solicitar esta habitación.
             </Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Fecha de entrada</Text>
+              <TextInput
+                accessibilityLabel="Fecha de entrada"
+                onChangeText={setCheckIn}
+                placeholder="AAAA-MM-DD"
+                placeholderTextColor="#9AA4AC"
+                style={styles.textInput}
+                value={checkIn}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Fecha de salida</Text>
+              <TextInput
+                accessibilityLabel="Fecha de salida"
+                onChangeText={setCheckOut}
+                placeholder="AAAA-MM-DD"
+                placeholderTextColor="#9AA4AC"
+                style={styles.textInput}
+                value={checkOut}
+              />
+            </View>
 
             {guestFields.map((field) => (
               <View key={field.name} style={styles.inputGroup}>

@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   sectionSubtitle: {
-    color: '#82909C',
+    color: '#060d14',
     fontSize: 12,
     marginTop: 4,
   },
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     color: '#5575C9',
   },
   availabilityDetail: {
-    color: '#82909C',
+    color: '#124470',
     fontSize: 11,
     marginTop: 3,
   },
